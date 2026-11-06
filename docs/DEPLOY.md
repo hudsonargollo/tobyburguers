@@ -3,15 +3,16 @@
 Producción corre en un **VPS propio (Ubuntu) con systemd + nginx**. Netlify, Vercel y
 Cloudflare no se usan para el sitio en vivo.
 
-## Topología objetivo
+## Topología en producción
 
-> Esta es la topología planeada para Toby; el VPS aún no está aprovisionado para
-> este repo. Confirma puerto, rutas y nombre de servicio antes del primer deploy.
+Aprovisionada el 2026-11-06. Los valores de esta tabla son los que tiene el VPS
+hoy; si se cambian, hay que actualizar la unit de systemd, el sitio de nginx y
+`scripts/deploy.sh` juntos.
 
 | Elemento | Valor |
 | -------- | ----- |
 | URL pública | <https://toby.clubemkt.digital> |
-| Código fuente | `/root/ClubeMkt/toby-app` |
+| Código fuente | `/root/ClubeMkt/toby-app` (clone de `github.com:hudsonargollo/tobyburguers`, rama `main`) |
 | Build desplegado | `/var/www/tobyburguers` (árbol standalone: `server.js`, `node_modules/`, `.next/`, `public/`) |
 | Servicio | `tobyburguers.service` (systemd) |
 | Puerto interno | `3016` (`PORT` en la unit — el `3015` de Pollos Campeón sigue ocupado) |
@@ -20,8 +21,12 @@ Cloudflare no se usan para el sitio en vivo.
 | Uploads | `UPLOAD_DIR=/var/www/toby-data/uploads` |
 | Base de datos | contenedor Docker `toby-db` (postgres:15-alpine) en `127.0.0.1:5438`, volumen `toby-db-data`; contraseña en `/root/.toby-dbpass` |
 
-> El kit de marca (fotos originales del sitio, `data/*.json`, fichas) vive aparte,
-> en `/root/ClubeMkt/tobyburguers`. No es código y el despliegue no lo toca.
+> El DNS de `*.clubemkt.digital` es un wildcard en Cloudflare, así que el sitio
+> quedó servido con solo agregar el server block de nginx: no hace falta abrir
+> registro ni certificado nuevo.
+
+> El kit de marca (fotos originales del menú, `data/*.json`, fichas) vive fuera
+> de este repo, en el proyecto `toby-menu/`. No es código y el despliegue no lo toca.
 
 `next.config.ts` genera `output: "standalone"` en el VPS (en Netlify/Vercel se
 desactiva porque esas plataformas empaquetan la app por su cuenta).
