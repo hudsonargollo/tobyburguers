@@ -95,7 +95,7 @@ export function ProductGallery({
             <div
               key={`${src}-${i}`}
               aria-hidden={i !== active}
-              className={`absolute inset-0 transition-[opacity,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+              className={`absolute inset-0 p-4 transition-[opacity,transform] duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] sm:p-6 ${
                 i === active ? "opacity-100" : "pointer-events-none opacity-0"
               }`}
             >
