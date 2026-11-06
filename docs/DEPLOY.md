@@ -42,8 +42,8 @@ El script:
 1. `npm install` y `npx prisma generate`.
 2. `npx prisma migrate deploy`.
 3. `npm run build`.
-4. Copia el build standalone a `/var/www/tobyburguers` (sin `node_modules`) y
-   sincroniza `public/`.
+4. Copia el build standalone a `/var/www/tobyburguers`, incluido el
+   `node_modules` reducido del standalone, y sincroniza `public/`.
 5. Limpia `.next/cache` y reinicia `tobyburguers.service`.
 6. Comprueba `http://127.0.0.1:3016/` hasta obtener `200`.
 

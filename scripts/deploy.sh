@@ -31,13 +31,16 @@ trap 'rm -rf "$STAGE"' EXIT
 cp -a "$ROOT/.next/standalone/." "$STAGE/"
 mkdir -p "$STAGE/.next/static"
 cp -a "$ROOT/.next/static/." "$STAGE/.next/static/"
-# node_modules is intentionally NOT synced: the standalone tree only carries the
-# server-side subset, and copying it over the full install breaks later builds
-# (client-only files such as react-dom/client.js go missing).
+# The standalone node_modules is the server-side subset only. It is synced into
+# a separate deploy dir (where nothing is built), never over the full install in
+# the source tree — that would break later builds (client-only files such as
+# react-dom/client.js go missing).
 mkdir -p "$DEPLOY_DIR/.next"
 rsync -a --delete "$STAGE/.next/" "$DEPLOY_DIR/.next/"
 rsync -a "$STAGE/server.js" "$STAGE/package.json" "$DEPLOY_DIR/"
 if [ "$ROOT" != "$DEPLOY_DIR" ]; then
+  mkdir -p "$DEPLOY_DIR/node_modules"
+  rsync -a --delete "$STAGE/node_modules/" "$DEPLOY_DIR/node_modules/"
   rsync -a --delete "$ROOT/public/" "$DEPLOY_DIR/public/"
 fi
 
