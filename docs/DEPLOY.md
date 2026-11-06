@@ -14,11 +14,11 @@ Cloudflare no se usan para el sitio en vivo.
 | Código fuente | `/root/ClubeMkt/toby-app` |
 | Build desplegado | `/var/www/tobyburguers` (árbol standalone: `server.js`, `node_modules/`, `.next/`, `public/`) |
 | Servicio | `tobyburguers.service` (systemd) |
-| Puerto interno | `3015` (`PORT` en la unit — `3004` lo usa el otro store) |
-| Proxy | nginx `sites-enabled/tobyburguers` → `http://172.17.0.1:3015` |
+| Puerto interno | `3016` (`PORT` en la unit — el `3015` de Pollos Campeón sigue ocupado) |
+| Proxy | nginx `sites-enabled/tobyburguers` → `http://172.17.0.1:3016` |
 | Variables de entorno | `EnvironmentFile=/root/ClubeMkt/toby-app/.env` (chmod 600) |
 | Uploads | `UPLOAD_DIR=/var/www/toby-data/uploads` |
-| Base de datos | contenedor Docker `toby-db` (postgres:15-alpine) en `127.0.0.1:5437`, volumen `toby-db-data`; contraseña en `/root/.toby-dbpass` |
+| Base de datos | contenedor Docker `toby-db` (postgres:15-alpine) en `127.0.0.1:5438`, volumen `toby-db-data`; contraseña en `/root/.toby-dbpass` |
 
 > El kit de marca (fotos originales del sitio, `data/*.json`, fichas) vive aparte,
 > en `/root/ClubeMkt/tobyburguers`. No es código y el despliegue no lo toca.
@@ -45,7 +45,7 @@ El script:
 4. Copia el build standalone a `/var/www/tobyburguers` (sin `node_modules`) y
    sincroniza `public/`.
 5. Limpia `.next/cache` y reinicia `tobyburguers.service`.
-6. Comprueba `http://127.0.0.1:3015/` hasta obtener `200`.
+6. Comprueba `http://127.0.0.1:3016/` hasta obtener `200`.
 
 ## Primera instalación (base de datos vacía)
 
@@ -66,8 +66,8 @@ bash scripts/deploy.sh   # como arriba, con DEPLOY_DIR/SERVICE/HEALTH_URL
 systemctl status tobyburguers.service
 systemctl restart tobyburguers.service
 journalctl -u tobyburguers.service -f
-curl -I http://127.0.0.1:3015/
-curl -s http://127.0.0.1:3015/api/health
+curl -I http://127.0.0.1:3016/
+curl -s http://127.0.0.1:3016/api/health
 ```
 
 `start-store.sh` es solo un respaldo manual para arrancar el build desplegado;
