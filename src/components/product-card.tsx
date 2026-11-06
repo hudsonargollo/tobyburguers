@@ -48,8 +48,8 @@ export function ProductCard({ product }: { product: ProductView }) {
       }`}
     >
       <Link href={`/product/${product.slug}`} className="relative block aspect-square overflow-hidden bg-white">
-        <div className="h-full w-full transition duration-500 group-hover:scale-105">
-          <ProductImage src={product.images[0]} alt={product.name} seed={product.slug} />
+        <div className="h-full w-full p-3 transition duration-500 group-hover:scale-105">
+          <ProductImage src={product.images[0]} alt={product.name} seed={product.slug} fit="contain" />
         </div>
         {/* keeps packshots on white while the card around them stays brand-warm */}
         <span
