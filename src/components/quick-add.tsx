@@ -31,7 +31,7 @@ export function QuickAdd({ product }: { product: ProductView }) {
   }
 
   return (
-    <div className="mt-3 flex items-center justify-between gap-2">
+    <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
       <div
         className="flex h-10 shrink-0 items-center rounded-full border border-[var(--line-strong)] bg-surface"
         role="group"
@@ -78,7 +78,7 @@ export function QuickAdd({ product }: { product: ProductView }) {
         }}
         aria-label={`Agregar ${qty} ${product.name} al carrito`}
         title="Agregar al carrito"
-        className={`flex h-10 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-xs font-semibold uppercase tracking-[0.08em] transition duration-200 active:scale-[0.98] ${
+        className={`flex h-10 min-w-[8.5rem] flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3.5 text-xs font-semibold uppercase tracking-[0.08em] transition duration-200 active:scale-[0.98] ${
           added
             ? "bg-accent text-brand-deep shadow-[0_12px_26px_-14px_rgba(232,190,26,0.95)]"
             : "bg-brand text-light shadow-[0_12px_26px_-14px_rgba(224,35,26,0.8)] hover:bg-brand-deep"
