@@ -1,0 +1,55 @@
+{
+  "name": "tobyburguers",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "start": "next start",
+    "lint": "eslint",
+    "postinstall": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:create-admin": "tsx --env-file=.env prisma/create-admin.ts",
+    "db:copy": "tsx prisma/copy-data.ts",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.135.0",
+    "@netlify/blobs": "^10.7.13",
+    "@prisma/client": "6.19.3",
+    "@types/three": "^0.180.0",
+    "@vercel/blob": "^2.8.0",
+    "framer-motion": "^14.9.0",
+    "lightweight-charts": "^4.2.3",
+    "next": "^16.4.3",
+    "nodemailer": "10.0.10",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "three": "^0.180.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@opennextjs/cloudflare": "^1.20.15",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/nodemailer": "8.0.2",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.5",
+    "prisma": "6.19.3",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "wrangler": "^4.156.0"
+  }
+}

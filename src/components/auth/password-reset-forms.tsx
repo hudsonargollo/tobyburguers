@@ -1,0 +1,102 @@
+"use client";
+
+import { useActionState } from "react";
+import Link from "next/link";
+import {
+  requestPasswordResetAction,
+  resetPasswordAction,
+  type AuthState,
+} from "@/app/(store)/auth-actions";
+import { AuthShell } from "@/components/auth/auth-shell";
+import { AuthAlert, AuthField, AuthSubmit, PasswordStrength, useAuthForm } from "@/components/auth/auth-field";
+import { emailError, newPasswordError } from "@/lib/auth-rules";
+
+const initial: AuthState = {};
+
+export function ForgotPasswordForm() {
+  const [state, formAction, pending] = useActionState(requestPasswordResetAction, initial);
+  const [formRef, f] = useAuthForm(formAction, state, { email: emailError });
+
+  return (
+    <AuthShell backHref="/login" backLabel="Volver a iniciar sesión">
+      <div className="text-center">
+        <h1 className="font-display text-3xl font-bold text-ink">Olvidé mi contraseña</h1>
+        <p className="mt-1 text-sm text-muted">Te enviaremos un enlace por correo para que elijas una nueva.</p>
+      </div>
+
+      {state.ok ? (
+        <div className="mt-7 rounded-xl border border-ok/40 bg-ok/[0.07] px-4 py-4 text-center text-sm text-ink">
+          <p className="font-display text-lg font-semibold text-ok">Revisa tu correo</p>
+          <p className="mt-1">{state.message}</p>
+        </div>
+      ) : (
+        <form ref={formRef} action={formAction} onSubmit={f.onSubmit} noValidate className="mt-7 space-y-5">
+          <AuthField
+            name="email"
+            label="Correo electrónico"
+            icon="mail"
+            type="email"
+            autoComplete="email"
+            placeholder="tu@ejemplo.com"
+            {...f.bind("email")}
+            {...f.field("email")}
+          />
+          {state.error && <AuthAlert>{state.error}</AuthAlert>}
+          <AuthSubmit pending={pending} label="Enviar enlace" pendingLabel="Enviando…" />
+        </form>
+      )}
+
+      <p className="mt-6 text-center text-sm text-muted">
+        ¿La recordaste?{" "}
+        <Link href="/login" className="font-semibold text-accent-strong hover:underline">
+          Iniciar sesión
+        </Link>
+      </p>
+    </AuthShell>
+  );
+}
+
+export function ResetPasswordForm({ token }: { token: string }) {
+  const [state, formAction, pending] = useActionState(resetPasswordAction, initial);
+  const [formRef, f] = useAuthForm(formAction, state, { password: newPasswordError });
+  const password = f.field("password");
+
+  return (
+    <AuthShell backHref="/login" backLabel="Volver a iniciar sesión">
+      <div className="text-center">
+        <h1 className="font-display text-3xl font-bold text-ink">Elige una nueva contraseña</h1>
+        <p className="mt-1 text-sm text-muted">Iniciarás sesión justo después.</p>
+      </div>
+
+      {token ? (
+        <form ref={formRef} action={formAction} onSubmit={f.onSubmit} noValidate className="mt-7 space-y-5">
+          <input type="hidden" name="token" value={token} />
+          <AuthField
+            name="password"
+            label="Nueva contraseña"
+            icon="lock"
+            password
+            autoComplete="new-password"
+            placeholder="Crea una contraseña"
+            {...f.bind("password")}
+            {...password}
+          >
+            <PasswordStrength value={f.value("password")} highlight={password.status === "invalid"} />
+          </AuthField>
+          {state.error && <AuthAlert>{state.error}</AuthAlert>}
+          <AuthSubmit pending={pending} label="Actualizar contraseña" pendingLabel="Guardando…" />
+        </form>
+      ) : (
+        <div className="mt-7">
+          <AuthAlert>
+            Este enlace de recuperación está incompleto.{" "}
+            <Link href="/forgot-password" className="font-semibold underline">
+              Solicitar uno nuevo
+            </Link>
+            .
+          </AuthAlert>
+        </div>
+      )}
+    </AuthShell>
+  );
+}

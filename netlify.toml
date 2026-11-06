@@ -1,0 +1,16 @@
+# Netlify configuration for the Toby ¡Mi Hamburguesa! Next.js store
+# Optional target. Production runs on the VPS — see docs/DEPLOY.md.
+
+[build]
+  # 1) apply any pending database migrations to the cloud DB, 2) build the site
+  command = "npx prisma migrate deploy && npm run build"
+
+[build.environment]
+  # Next.js 16 needs Node 20.9+; Prisma 6 + Next 16 are tested here on Node 22
+  NODE_VERSION = "22"
+  # Telemetry off in CI
+  NEXT_TELEMETRY_DISABLED = "1"
+
+# Official Next.js runtime for Netlify (auto-installed if missing)
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

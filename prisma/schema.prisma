@@ -1,0 +1,289 @@
+// Toby ¡Mi Hamburguesa! — Prisma schema (PostgreSQL)
+// Multi-branch mini-market: shared catalog, stock per branch, branch-scoped staff.
+
+generator client {
+  provider      = "prisma-client-js"
+  // native = this machine / build box; rhel-openssl-3.0.x = Netlify (AWS Lambda) functions
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url       = env("DATABASE_URL")
+  // Migrations need a direct (non-pooled) connection. Locally / on a VPS set it
+  // to the same value as DATABASE_URL; on Neon use the non "-pooler" URL.
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------- Catalog ----------
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  image       String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Product {
+  brand          String?     // e.g. "Leche PIL", "Ariel", "Olafuturo", "Olas", "Borita", "Skip", "Untar"
+  contents       String?     // e.g. "1 L", "900 ml", "1 kg", "5 L"
+  details        String?     // e.g. "Materia Grasa: 1.9%", "17 efectos", "100% Vegetal"
+
+  id             String      @id @default(cuid())
+  name           String
+  slug           String      @unique
+  description    String?
+  // Price in Bs (bolivianos), stored as Decimal for money-safe math
+  price          Decimal     @db.Decimal(10, 2)
+  compareAtPrice Decimal?    @db.Decimal(10, 2)
+  sku            String?     @unique
+  images         String[]    @default([])
+  material       String?     // presentation, e.g. "Botella 1 L", "Paquete 6 un."
+  specs          String?     // per-product specs, one "Label: Value" per line
+  featured       Boolean     @default(false)
+  active         Boolean     @default(true)
+  category       Category    @relation(fields: [categoryId], references: [id])
+  categoryId     String
+  orderItems     OrderItem[]
+  branchStock    BranchStock[]
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([categoryId])
+  @@index([featured])
+}
+
+// ---------- Branches ----------
+
+// A physical store in the chain. Every order belongs to exactly one branch and
+// each branch has its own staff logins. The catalog is shared; stock is not.
+model Branch {
+  id              String         @id @default(cuid())
+  name            String
+  slug            String         @unique
+  // Short code used in order numbers, e.g. "SM01"
+  code            String         @unique
+  address         String
+  city            String
+  phone           String?
+  whatsapp        String?
+  hours           String?        // e.g. "Lun–Sáb, 8:00 – 21:00"
+  image           String?
+  mapsUrl         String?
+  // Used to suggest the closest branch from the shopper's geolocation
+  latitude        Float?
+  longitude       Float?
+  deliveryEnabled Boolean        @default(true)
+  pickupEnabled   Boolean        @default(true)
+  // Optional per-branch shipping overrides (null = use the store-wide settings)
+  flatFee         Decimal?       @db.Decimal(10, 2)
+  freeThreshold   Decimal?       @db.Decimal(10, 2)
+  active          Boolean        @default(true)
+  sortOrder       Int            @default(0)
+  users           User[]
+  orders          Order[]
+  stock           BranchStock[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([active, sortOrder])
+}
+
+// Stock of one product at one branch. `active` lets a branch hide a product
+// from shoppers locally without touching the shared catalog.
+model BranchStock {
+  id        String   @id @default(cuid())
+  branch    Branch   @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  branchId  String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId String
+  stock     Int      @default(0)
+  active    Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+
+  @@unique([branchId, productId])
+  @@index([productId])
+}
+
+// ---------- Orders ----------
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  COD
+  PAYFAST
+  SAFEPAY
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum FulfillmentType {
+  DELIVERY
+  PICKUP
+}
+
+model Order {
+  id            String        @id @default(cuid())
+  orderNumber   String        @unique
+  status        OrderStatus   @default(PENDING)
+  paymentMethod PaymentMethod @default(COD)
+  paymentStatus PaymentStatus @default(PENDING)
+  // Gateway reference (e.g. Safepay tracker) used to match webhooks to orders
+  paymentRef    String?
+
+  // Branch that fulfils this order. Every order is placed against one store.
+  fulfillment   FulfillmentType @default(DELIVERY)
+  branch        Branch          @relation(fields: [branchId], references: [id])
+  branchId      String
+
+  // Customer (guest checkout supported; linked to an account when signed in)
+  customerName  String
+  email         String
+  phone         String
+  // Delivery address (null for in-store pickup)
+  address       String?
+  city          String?
+  postalCode    String?
+  notes         String?
+
+  // Optional link to a registered customer account
+  customer      Customer?     @relation(fields: [customerId], references: [id])
+  customerId    String?
+
+  // Money (Bs)
+  subtotal      Decimal       @db.Decimal(10, 2)
+  shipping      Decimal       @default(0) @db.Decimal(10, 2)
+  total         Decimal       @db.Decimal(10, 2)
+
+  // Courier shipment (Leopards / TCS)
+  courier         String?
+  trackingNumber  String?
+  shippedAt       DateTime?
+
+  items         OrderItem[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([status])
+  @@index([email])
+  @@index([customerId])
+  @@index([paymentRef])
+  @@index([branchId, createdAt])
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId   String
+  product   Product  @relation(fields: [productId], references: [id])
+  productId String
+  // Snapshots so historical orders stay accurate if the product changes
+  name      String
+  price     Decimal  @db.Decimal(10, 2)
+  quantity  Int
+
+  @@index([orderId])
+}
+
+// ---------- Admin ----------
+
+enum Role {
+  ADMIN
+  STAFF
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  role         Role     @default(ADMIN)
+  // Staff are bound to one branch and only see that branch's orders/stock.
+  // ADMIN accounts are global (branchId = null).
+  branch       Branch?  @relation(fields: [branchId], references: [id])
+  branchId     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([branchId])
+}
+
+// Storefront customer accounts (separate from admin `User`).
+model Customer {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  phone        String?
+  // Set once the customer proves they own the email (OTP). Null = unverified
+  // (accounts created before OTP existed, or via checkout sign-up).
+  emailVerifiedAt DateTime?
+  orders       Order[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// One-time email codes (OTP). Only a hash of the code is stored.
+//  purpose "register": pending sign-up — payload holds name + passwordHash until verified.
+//  purpose "verify":   an existing customer confirming their email.
+model EmailVerification {
+  id          String   @id @default(cuid())
+  email       String
+  purpose     String
+  codeHash    String
+  payload     Json?
+  attempts    Int      @default(0)
+  sendCount   Int      @default(1)
+  lastSentAt  DateTime @default(now())
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@unique([email, purpose])
+}
+
+// ---------- Inbound (contact form + newsletter) ----------
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  subject   String?
+  message   String
+  topic     String?  // e.g. "custom", "notify:<category>"
+  handled   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model Subscriber {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  source    String?  // where they signed up (newsletter, notify:<category>)
+  createdAt DateTime @default(now())
+}
+
+// ---------- Store settings (editable in Admin → Settings) ----------
+// Key/value JSON, e.g. key "store" holds contact, socials, shipping, etc.
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}

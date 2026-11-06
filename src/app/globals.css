@@ -1,0 +1,440 @@
+@import "tailwindcss";
+
+/* Dark mode is driven by <html data-theme="dark"> (set by the theme toggle) */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ============================================================
+   Toby ¡Mi Hamburguesa! — brand theme
+   Red + golden yellow, sampled from the TOBY logo lockup
+   (#e0231a body, #e8be1a outline). The violet in the menu artwork
+   is carried by the art itself, with #49257c kept as a promo surface.
+   ============================================================ */
+
+/* Self-hosted, open-licensed (SIL OFL) faces served from /public/fonts.
+   Titan One ships a single weight, so bold is synthesised by the browser;
+   DM Sans is a variable file covering 400–700. */
+@font-face {
+  font-family: "TitanOne";
+  src: url("/fonts/titanone-latin.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2212;
+}
+
+@font-face {
+  font-family: "DMSans";
+  src: url("/fonts/dmsans-latin.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2212;
+}
+
+@font-face {
+  font-family: "DMSans";
+  src: url("/fonts/dmsans-latin-ext.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1D00-1DBF, U+1E00-1E9F, U+2020, U+20A0-20AB, U+20AD-20C4;
+}
+
+@theme {
+  /* Brand — Toby red */
+  --color-brand: #e0231a;      /* primary red */
+  --color-brand-dark: #b81610;
+  --color-brand-deep: #6e0a06; /* dark red surfaces */
+  --color-panel: #fcebe6;      /* soft red panel */
+  --color-panel-2: #f9d9ce;
+
+  /* Accent — Toby yellow (buttons stay bright, never mustard) */
+  --color-accent: #e8be1a;
+  --color-accent-soft: #f5d85b;
+  --color-accent-strong: #8a6a00; /* readable gold for text on light */
+  --color-gold: #f5d85b;
+
+  /* Secondary surface from the menu artwork */
+  --color-violet: #49257c;
+
+  /* Neutrals — warm white */
+  --color-ink: #241c1a;
+  --color-cream: #fff9f0;
+  --color-cream-soft: #fffdf8;
+  --color-sand: #fbeee0;
+  --color-surface: #ffffff;    /* cards / inputs (flips in dark mode) */
+  --color-light: #fff8f2;      /* fixed white — text on dark surfaces (never flips) */
+  --color-muted: #7a5a50;      /* muted text on light */
+  --color-muted-dark: #f3c4bb; /* muted text on dark red */
+
+  /* Form feedback — kept deeper than --color-brand so errors don't
+     read as brand chrome */
+  --color-ok: #2f7d5c;
+  --color-bad: #b3261e;
+
+  /* Fonts (self-hosted, see @font-face above) */
+  --font-display: "TitanOne", "Arial Black", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "DMSans", "Helvetica Neue", Arial, ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: light;
+  --background: #fff9f0;
+  --foreground: #241c1a;
+  --line: rgba(36, 28, 26, 0.14);
+  --line-strong: rgba(36, 28, 26, 0.34);
+  --frame: rgba(36, 28, 26, 0.55);
+}
+
+/* ---------- Dark theme (toggle sets data-theme="dark" on <html>) ---------- */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-brand: #ff5c4d;
+  --color-brand-dark: #e0342a;
+  --color-brand-deep: #3a0604;
+  --color-panel: #241012;
+  --color-panel-2: #2f1517;
+
+  --color-accent: #e8be1a;
+  --color-accent-soft: #f5d85b;
+  --color-accent-strong: #efc93a;
+  --color-gold: #f5d85b;
+
+  --color-ink: #fbede8;
+  --color-cream: #140b0a;
+  --color-cream-soft: #1b0f0d;
+  --color-sand: #241012;
+  --color-surface: #1c0e12;
+  --color-light: #fff8f2;
+  --color-muted: #c9a099;
+  --color-muted-dark: #f3c4bb;
+  --color-ok: #6cc59a;
+  --color-bad: #ff8a80;
+
+  --background: #140b0a;
+  --foreground: #fbede8;
+  --line: rgba(251, 237, 232, 0.14);
+  --line-strong: rgba(251, 237, 232, 0.30);
+  --frame: rgba(232, 190, 26, 0.45);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Browser autofill paints filled fields light blue (Chrome) — keep the site's own
+   surface + ink colors instead. The UA background can't be overridden, so a large
+   inset shadow covers it. (Separate rules: one unknown selector drops a whole list.) */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: var(--color-ink);
+  caret-color: var(--color-ink);
+  -webkit-box-shadow: 0 0 0 1000px var(--color-surface) inset;
+  box-shadow: 0 0 0 1000px var(--color-surface) inset;
+  transition: background-color 600000s 0s, color 600000s 0s;
+}
+input:autofill {
+  box-shadow: 0 0 0 1000px var(--color-surface) inset;
+  -webkit-text-fill-color: var(--color-ink);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-weight: 400;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Clip the off-screen mobile drawer without breaking the sticky header */
+  overflow-x: clip;
+}
+
+h1, h2, h3, h4, .serif {
+  font-family: var(--font-display);
+}
+
+h1, h2 {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+h3, h4 {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* Body copy sits at a comfortable, readable weight */
+p {
+  font-weight: 400;
+}
+
+/* Thin uppercase label. Kept in the components layer so a text-* utility at
+   the call site can override the default red (unlayered CSS would win). */
+@layer components {
+  .eyebrow {
+    font-weight: 600;
+    font-size: 0.72rem;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: var(--color-brand);
+  }
+}
+
+/* Double-line frame for editorial panels */
+.ornate-frame {
+  position: relative;
+  border: 1px solid var(--frame);
+  outline: 3px solid transparent;
+  box-shadow: inset 0 0 0 4px var(--color-cream), inset 0 0 0 5px var(--frame);
+}
+
+/* Continuous marquee (announcement strip) */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
+.animate-marquee-slow {
+  animation: marquee 55s linear infinite;
+}
+.animate-marquee-slow-rev {
+  animation: marquee 55s linear infinite reverse;
+}
+.marquee-pause:hover .animate-marquee,
+.marquee-pause:hover .animate-marquee-slow,
+.marquee-pause:hover .animate-marquee-slow-rev {
+  animation-play-state: paused;
+}
+
+/* Scroll reveal (fade + rise) */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+  will-change: opacity, transform;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Gentle float for accents */
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.animate-floaty {
+  animation: floaty 4s ease-in-out infinite;
+}
+
+/* Toast slide-in (used by the toast system + admin order alerts) */
+@keyframes toastin {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Support-chat panel entrance */
+@keyframes chatin {
+  from { opacity: 0; transform: translateY(20px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-chatin {
+  animation: chatin 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  transform-origin: bottom right;
+}
+/* Soft attention pulse for the chat launcher */
+@keyframes chatpulse {
+  0% { box-shadow: 0 0 0 0 rgba(232,190,26,0.55); }
+  70% { box-shadow: 0 0 0 14px rgba(232,190,26,0); }
+  100% { box-shadow: 0 0 0 0 rgba(232,190,26,0); }
+}
+.animate-chatpulse {
+  animation: chatpulse 2.6s ease-out infinite;
+}
+
+/* Shine sweeping across sale badges */
+@keyframes sale-shine {
+  0% { transform: translateX(-160%) skewX(-20deg); }
+  55%, 100% { transform: translateX(260%) skewX(-20deg); }
+}
+.sale-shine {
+  position: relative;
+  overflow: hidden;
+}
+.sale-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, var(--sale-shine, rgba(255, 255, 255, 0.7)), transparent);
+  animation: sale-shine 3.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Hanging ribbon with a V-notch tail (product-card sale badge) */
+.sale-ribbon {
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 84%, 0 100%);
+}
+
+/* Dual-thumb price slider: two stacked range inputs, only the thumbs take
+   pointer events; the track + accent fill are drawn by sibling divs. */
+.range-dual {
+  position: relative;
+  height: 1.5rem;
+}
+.range-dual input[type="range"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 1.5rem;
+  margin: 0;
+  background: none;
+  pointer-events: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.range-dual input[type="range"]::-webkit-slider-runnable-track {
+  height: 1.5rem;
+  background: transparent;
+}
+.range-dual input[type="range"]::-moz-range-track {
+  background: transparent;
+}
+.range-dual input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  pointer-events: auto;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.125rem;
+  border-radius: 9999px;
+  border: 2px solid var(--color-accent-strong);
+  background: radial-gradient(circle, var(--color-accent-soft) 0 28%, var(--color-surface) 32%);
+  box-shadow: 0 3px 10px rgba(18, 53, 31, 0.28);
+  cursor: grab;
+  transition: transform 0.15s ease;
+}
+.range-dual input[type="range"]::-moz-range-thumb {
+  pointer-events: auto;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 9999px;
+  border: 2px solid var(--color-accent-strong);
+  background: radial-gradient(circle, var(--color-accent-soft) 0 28%, var(--color-surface) 32%);
+  box-shadow: 0 3px 10px rgba(18, 53, 31, 0.28);
+  cursor: grab;
+}
+.range-dual input[type="range"]:active::-webkit-slider-thumb {
+  cursor: grabbing;
+  transform: scale(1.12);
+}
+.range-dual input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px rgba(224, 123, 42, 0.35);
+}
+.range-dual input[type="range"]:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 4px rgba(224, 123, 42, 0.35);
+}
+.range-dual input[type="range"]:focus {
+  outline: none;
+}
+
+/* Auth forms: "no" shake on a wrong entry, soft rise-in for the card */
+@keyframes auth-shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-9px); }
+  30% { transform: translateX(8px); }
+  45% { transform: translateX(-6px); }
+  60% { transform: translateX(5px); }
+  75% { transform: translateX(-3px); }
+  90% { transform: translateX(2px); }
+}
+.animate-shake {
+  animation: auth-shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+@keyframes auth-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+.animate-auth-in {
+  animation: auth-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ---------- Typographic motion (21st.dev-style word reveals) ---------- */
+/* Split heading: each word rises out of blur once the line enters view. */
+@keyframes word-in {
+  from { opacity: 0; filter: blur(10px); transform: translateY(0.5em) scale(0.985); }
+  to   { opacity: 1; filter: blur(0);   transform: none; }
+}
+.split-word { opacity: 0; }
+.split-word.is-in {
+  animation: word-in 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.rotate-word {
+  animation: word-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Promotion slider copy swap */
+@keyframes slide-text-in {
+  from { opacity: 0; filter: blur(8px); transform: translateY(14px); }
+  to   { opacity: 1; filter: blur(0);   transform: none; }
+}
+.slide-text-in { animation: slide-text-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Product-gallery autoplay bar */
+@keyframes gallery-progress {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+.gallery-progress {
+  transform-origin: left center;
+  animation: gallery-progress var(--gal-dur, 5.2s) linear forwards;
+}
+
+/* Delivery band: travelling dashes + gentle rider drift */
+@keyframes route-dash {
+  to { stroke-dashoffset: -260; }
+}
+.route-dash { animation: route-dash 9s linear infinite; }
+@keyframes rider-drift {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(-0.8deg); }
+  50%      { transform: translate3d(0, -9px, 0) rotate(0.8deg); }
+}
+.animate-rider { animation: rider-drift 6.5s ease-in-out infinite; }
+@keyframes ring-pulse {
+  0%   { opacity: 0.55; transform: scale(0.72); }
+  70%  { opacity: 0;    transform: scale(1.18); }
+  100% { opacity: 0;    transform: scale(1.18); }
+}
+.animate-ring { animation: ring-pulse 4.8s ease-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .split-word, .split-word.is-in, .rotate-word, .slide-text-in {
+    animation: none !important;
+    opacity: 1;
+    filter: none;
+    transform: none;
+  }
+  .gallery-progress { animation: none; transform: none; }
+  .route-dash, .animate-rider, .animate-ring { animation: none; }
+  .animate-shake, .animate-auth-in { animation: none; }
+  .animate-marquee, .animate-marquee-slow, .animate-marquee-slow-rev, .animate-floaty,
+  .animate-chatin, .animate-chatpulse { animation: none; }
+  .sale-shine::after { animation: none; display: none; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+}
+
+/* Native dropdown lists follow the theme (Chrome on Linux / Windows paints
+   <option> rows itself — without this they stay white in dark mode). */
+select option {
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+}

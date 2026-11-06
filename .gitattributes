@@ -1,0 +1,5 @@
+# Keep the lockfile and shell scripts LF-only on every platform.
+# Without this, a Windows checkout of package-lock.json produced a 25k-line
+# whitespace-only diff on the first `npm install` on Linux.
+package-lock.json text eol=lf
+*.sh text eol=lf
