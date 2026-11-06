@@ -87,7 +87,7 @@ export function MenuPromoSlider() {
             Lo que hoy está de moda
           </h2>
           <p className="mt-2 text-sm text-muted sm:text-base">
-            Combos, línea premium, baldes y postres. Elegí tu favorito del menú.
+            Combos, línea premium, baldes y postres. Elige tu favorito del menú.
           </p>
         </div>
         <div className="flex items-center gap-2">
