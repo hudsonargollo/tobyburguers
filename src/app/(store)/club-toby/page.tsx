@@ -28,7 +28,7 @@ export default async function ClubTobyPage() {
   const rules = settings.loyalty;
   const session = await getCustomerSession();
 
-  const [balances, rewards, cards, pending, history] = await loadClub(session?.id, rules);
+  const { balances, rewards, cards, pending, history } = await loadClub(session?.id, rules);
   const eligibleLabel =
     rules.eligible === "all"
       ? "Todo el menú"

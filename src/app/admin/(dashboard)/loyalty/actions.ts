@@ -182,14 +182,15 @@ export async function setRedemptionStatus(id: string, status: string): Promise<v
   const session = await guard(requireAdmin);
   if (!session) return;
   if (!STATUSES.includes(status as RedemptionStatus)) return;
+  const to = status as RedemptionStatus;
   const redemption = await prisma.redemption.findUnique({ where: { id } });
-  if (!redemption || redemption.status === status) return;
+  if (!redemption || redemption.status === to) return;
   try {
     await prisma.$transaction(async (tx) => {
-      await tx.redemption.update({ where: { id }, data: { status } });
+      await tx.redemption.update({ where: { id }, data: { status: to } });
       // Cancelling gives the prize back to the shelf and the points to the
       // customer, as one atomic step.
-      if (status === "CANCELLED" && redemption.status !== "CANCELLED") {
+      if (to === "CANCELLED") {
         await tx.reward.update({ where: { id: redemption.rewardId }, data: { stock: { increment: 1 } } });
         await tx.loyaltyEntry.create({
           data: {
