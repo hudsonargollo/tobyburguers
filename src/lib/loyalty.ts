@@ -213,6 +213,10 @@ export async function redeemReward(input: {
  * Reverses everything an order earned (cancelled/refunded orders). Idempotent:
  * a second call for the same order writes nothing. A card spent on that order's
  * free product comes back too.
+ *
+ * A reversal never takes away stamps or points the customer already spent: the
+ * ledger can end at zero, never below, so cancelling an old order cannot leave a
+ * negative balance behind.
  */
 export async function refundOrderLoyalty(orderId: string): Promise<boolean> {
   return prisma.$transaction(async (tx) => {
@@ -224,14 +228,28 @@ export async function refundOrderLoyalty(orderId: string): Promise<boolean> {
     const already = await tx.loyaltyEntry.count({ where: { orderId, kind: "REFUND" } });
     if (already > 0) return false;
     for (const e of earned) {
+      let stamps = -e.stamps;
+      let points = -e.points;
+      if (stamps > 0) {
+        const left = await balanceOf(tx, e.customerId, "stamps", e.productId ?? undefined);
+        stamps = Math.max(0, Math.min(stamps, left));
+      }
+      if (points > 0) {
+        const left = await balanceOf(tx, e.customerId, "points");
+        points = Math.max(0, Math.min(points, left));
+      }
       await tx.loyaltyEntry.create({
         data: {
           customerId: e.customerId,
           productId: e.productId,
           orderId,
           kind: "REFUND",
-          stamps: -e.stamps,
-          points: -e.points,
+          stamps,
+          points,
+          note:
+            stamps === -e.stamps && points === -e.points
+              ? null
+              : "Reverso parcial: parte del saldo ya estaba canjeada.",
         },
       });
     }
