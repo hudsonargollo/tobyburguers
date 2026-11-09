@@ -15,15 +15,17 @@ export function useIsAuthScreen(): boolean {
 export function ConditionalHeader({
   announcements,
   branch = null,
+  clubName = null,
 }: {
   announcements: string[];
   branch?: { name: string } | null;
+  clubName?: string | null;
 }) {
   if (useIsAuthScreen()) return null;
   return (
     <>
       <Marquee items={announcements} />
-      <SiteHeader branch={branch} />
+      <SiteHeader branch={branch} clubName={clubName} />
     </>
   );
 }

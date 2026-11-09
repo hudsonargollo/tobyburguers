@@ -35,6 +35,10 @@ export function SiteFooter({ settings }: { settings: StoreSettings }) {
     whatsappUrl: whatsappUrl(settings),
     phoneHref: phoneHref(settings),
   };
+  // The programme name (and whether it exists at all) comes from Admin → Club Toby.
+  const help = settings.loyalty.enabled
+    ? [{ label: settings.loyalty.name, href: "/club-toby" }, ...HELP]
+    : HELP;
   return (
     <footer
       className="relative overflow-hidden text-light/80"
@@ -101,7 +105,7 @@ export function SiteFooter({ settings }: { settings: StoreSettings }) {
         <FooterCol title="Explorar" links={NAV} className="md:col-span-2" />
 
         {/* Help */}
-        <FooterCol title="Ayuda" links={HELP} className="md:col-span-3" />
+        <FooterCol title="Ayuda" links={help} className="md:col-span-3" />
 
         {/* Contact */}
         <div className="flex flex-col items-center text-center md:col-span-3 md:items-start md:text-left">

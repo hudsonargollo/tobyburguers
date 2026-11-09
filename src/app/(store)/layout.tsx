@@ -34,6 +34,7 @@ export default async function StoreLayout({ children }: { children: React.ReactN
       <ConditionalHeader
         announcements={renderAnnouncements(settings)}
         branch={branch ? { name: branch.name } : null}
+        clubName={settings.loyalty.enabled ? settings.loyalty.name : null}
       />
       <main className="flex-1">{children}</main>
       <ConditionalFooter settings={settings} />

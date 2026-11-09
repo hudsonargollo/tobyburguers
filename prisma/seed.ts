@@ -195,9 +195,21 @@ async function main() {
       "Desde 1981, la hamburguesa de Santa Cruz",
       "Delivery con AutoToby y PedidosYa",
       "Combos con papas fritas y gaseosa",
+      "Club Toby: junta 10 sellos y llévate 1 gratis",
       "Retiro en sucursal · Pago contra entrega",
     ],
     inventory: { lowStockThreshold: 5 },
+    loyalty: {
+      enabled: true,
+      name: "Club Toby",
+      stampsToFree: 10,
+      eligible: "all",
+      eligibleSlugs: [],
+      pointsPer: 1,
+      pointsAmount: 10,
+      pointsOnShipping: false,
+      expiryDays: 0,
+    },
     notifications: { orderEmail: "" },
   };
 
@@ -206,6 +218,24 @@ async function main() {
     update: { value: settings },
     create: { key: "store", value: settings },
   });
+  console.log("  ✔ store settings");
+
+  // Starting rewards shop. Upserted by slug so the owner's edits (name, cost,
+  // stock) survive a re-seed.
+  const rewards = [
+    { slug: "botella-toby", name: "Botella squeeze Toby", description: "Botella reutilizable de la marca.", costPoints: 250, stock: 40, order: 1 },
+    { slug: "bolso-toby", name: "Bolso de tela Toby", description: "Bolso de algodón para el diario.", costPoints: 300, stock: 30, order: 2 },
+    { slug: "juguete-toby-jr", name: "Juguete para los más chicos", description: "Sorpresa de la marca para niños.", costPoints: 200, stock: 50, order: 3 },
+    { slug: "gorra-toby", name: "Gorra Toby", description: "Gorra con el logo de Toby.", costPoints: 400, stock: 20, order: 4 },
+  ];
+  for (const r of rewards) {
+    await prisma.reward.upsert({
+      where: { slug: r.slug },
+      update: { name: r.name, description: r.description, costPoints: r.costPoints, order: r.order },
+      create: r,
+    });
+  }
+  console.log(`  ✔ ${rewards.length} Club Toby rewards`);
 
   console.log("✅ Seed complete.");
 }

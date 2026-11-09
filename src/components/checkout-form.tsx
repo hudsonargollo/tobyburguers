@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/toast";
 import { formatPrice, savingsOf, visiblePack } from "@/lib/format";
 import { SavingsStrip } from "@/components/ui/sale-badge";
 import { shippingFor } from "@/lib/settings-shared";
+import type { LoyaltyCartPreview } from "@/lib/loyalty-shared";
 
 type PaymentMethod = "COD" | "PAYFAST" | "SAFEPAY";
 
@@ -71,8 +72,53 @@ export function CheckoutForm({
   const [error, setError] = useState<string | null>(paymentNotice ? NOTICES[paymentNotice] : null);
 
   const isPickup = fulfillment === "PICKUP";
-  const shipping = isPickup ? 0 : shippingFor(subtotal, shippingRules);
-  const total = subtotal + shipping;
+  const baseShipping = isPickup ? 0 : shippingFor(subtotal, shippingRules);
+
+  // ---- Club Toby: what this cart earns, and any full card to spend ----
+  const [loyalty, setLoyalty] = useState<LoyaltyCartPreview | null>(null);
+  const [redeemId, setRedeemId] = useState<string | null>(null);
+  const cartKey = items.map((i) => `${i.id}:${i.quantity}`).join(",");
+
+  useEffect(() => {
+    if (!ready || items.length === 0) return;
+    let cancelled = false;
+    fetch("/api/loyalty/cart", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: items.map((i) => ({ productId: i.id, quantity: i.quantity })),
+        subtotal,
+        shipping: baseShipping,
+        redeemProductId: redeemId,
+      }),
+    })
+      .then((r) => (r.ok ? (r.json() as Promise<LoyaltyCartPreview>) : null))
+      .then((data) => {
+        if (!cancelled && data?.ok) setLoyalty(data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cartKey, redeemId, ready, isPickup]);
+
+  // A card can stop being spendable (quantity changed, staff adjusted it); drop
+  // the selection so the shopper is never promised a redemption that will fail.
+  useEffect(() => {
+    if (!redeemId || !loyalty) return;
+    if (!loyalty.redeemable.some((r) => r.productId === redeemId)) setRedeemId(null);
+  }, [loyalty, redeemId]);
+
+  const freeLine = loyalty?.redeemable.find((r) => r.productId === redeemId) ?? null;
+  const discount = freeLine ? freeLine.price : 0;
+  const payableSubtotal = subtotal - discount;
+  const shipping = isPickup
+    ? 0
+    : freeLine
+      ? shippingFor(payableSubtotal, shippingRules)
+      : baseShipping;
+  const total = payableSubtotal + shipping;
 
   const paymentNoticeShown = useRef(false);
   useEffect(() => {
@@ -121,6 +167,7 @@ export function CheckoutForm({
       postalCode: isPickup ? null : form.get("postalCode"),
       notes: form.get("notes"),
       paymentMethod: payment,
+      redeemProductId: freeLine ? redeemId : null,
       items: items.map((i) => ({
         productId: i.id,
         name: i.name,
@@ -317,11 +364,55 @@ export function CheckoutForm({
               ))}
             </ul>
 
+            {loyalty?.enabled && loyalty.redeemable.length > 0 && (
+              <div className="mt-4 rounded-xl border border-accent/40 bg-accent/8 p-4">
+                <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-accent-strong">
+                  {loyalty.name}
+                </p>
+                <p className="mt-1 text-sm text-ink">
+                  Tienes una tarjeta completa: elige el producto que quieres gratis en este pedido.
+                </p>
+                <div className="mt-3 space-y-2">
+                  {loyalty.redeemable.map((r) => (
+                    <label
+                      key={r.productId}
+                      className="flex cursor-pointer items-center gap-2.5 text-sm text-ink"
+                    >
+                      <input
+                        type="radio"
+                        name="loyaltyRedeem"
+                        checked={redeemId === r.productId}
+                        onChange={() => setRedeemId(r.productId)}
+                        className="h-4 w-4 accent-[var(--color-accent-strong)]"
+                      />
+                      <span className="min-w-0 flex-1 truncate">{r.name}</span>
+                      <span className="shrink-0 font-medium text-accent-strong">
+                        −{formatPrice(r.price)}
+                      </span>
+                    </label>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setRedeemId(null)}
+                    className="text-xs text-muted underline underline-offset-2 hover:text-ink"
+                  >
+                    No canjear ahora
+                  </button>
+                </div>
+              </div>
+            )}
+
             <dl className="mt-4 space-y-2 text-sm">
               <div className="flex justify-between">
                 <dt className="text-muted">Subtotal</dt>
                 <dd className="text-ink">{formatPrice(subtotal)}</dd>
               </div>
+              {freeLine && (
+                <div className="flex justify-between">
+                  <dt className="text-accent-strong">Canje {freeLine.name}</dt>
+                  <dd className="text-accent-strong">−{formatPrice(freeLine.price)}</dd>
+                </div>
+              )}
               <div className="flex justify-between">
                 <dt className="text-muted">{isPickup ? "Retiro en tienda" : "Delivery"}</dt>
                 <dd className="text-ink">
@@ -341,6 +432,23 @@ export function CheckoutForm({
               <span className="font-display text-2xl font-semibold text-ink">{formatPrice(total)}</span>
             </div>
             {savings > 0 && <SavingsStrip amount={savings} className="mt-4" />}
+
+            {loyalty?.enabled && (loyalty.stamps > 0 || loyalty.points > 0) && (
+              <p className="mt-3 text-center text-xs text-muted">
+                Este pedido suma{" "}
+                {loyalty.stamps > 0 && (
+                  <span className="text-ink">
+                    {loyalty.stamps} sello{loyalty.stamps === 1 ? "" : "s"}
+                  </span>
+                )}
+                {loyalty.stamps > 0 && loyalty.points > 0 && " y "}
+                {loyalty.points > 0 && <span className="text-ink">{loyalty.points} puntos</span>}
+                {" · "}
+                <Link href="/club-toby" className="underline underline-offset-2 hover:text-ink">
+                  {loyalty.name}
+                </Link>
+              </p>
+            )}
 
             {error && (
               <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>

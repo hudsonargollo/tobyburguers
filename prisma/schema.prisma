@@ -50,6 +50,7 @@ model Product {
   categoryId     String
   orderItems     OrderItem[]
   branchStock    BranchStock[]
+  loyaltyEntries LoyaltyEntry[]
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
@@ -87,6 +88,7 @@ model Branch {
   users           User[]
   orders          Order[]
   stock           BranchStock[]
+  redemptions     Redemption[]
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
@@ -177,6 +179,7 @@ model Order {
   shippedAt       DateTime?
 
   items         OrderItem[]
+  loyaltyEntries LoyaltyEntry[]
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
@@ -235,6 +238,8 @@ model Customer {
   // (accounts created before OTP existed, or via checkout sign-up).
   emailVerifiedAt DateTime?
   orders       Order[]
+  redemptions  Redemption[]
+  loyaltyEntries LoyaltyEntry[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -286,4 +291,89 @@ model Setting {
   key       String   @id
   value     Json
   updatedAt DateTime @updatedAt
+}
+
+// ---------- Loyalty (Club Toby) ----------
+// The ledger is append-only: a balance is the sum of its rows, so nothing can
+// drift out of sync with the history that produced it. Stamps are signed and
+// grouped by product (10 of the same product = that product free); points are
+// signed and pooled (spent in the rewards shop).
+
+enum LoyaltyKind {
+  STAMP         // a qualifying unit bought
+  POINT         // spend converted into points
+  REDEEM_STAMP  // stamps spent on a free unit at checkout
+  REDEEM_PRIZE  // points spent on a reward
+  REFUND        // reversed after a cancellation
+  ADJUST        // manual correction by staff
+}
+
+enum RedemptionStatus {
+  PENDING    // claimed, waiting for the branch to prepare it
+  READY      // at the branch, waiting to be picked up
+  COLLECTED  // handed over
+  CANCELLED  // points refunded
+}
+
+model Reward {
+  id          String       @id @default(cuid())
+  slug        String       @unique
+  name        String
+  description String?
+  image       String?
+  costPoints  Int
+  stock       Int          @default(0)
+  active      Boolean      @default(true)
+  order       Int          @default(0)
+  redemptions Redemption[]
+  loyaltyEntries LoyaltyEntry[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([active, order])
+}
+
+model Redemption {
+  id         String           @id @default(cuid())
+  // Short code the customer shows at the branch
+  code       String           @unique
+  customer   Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String
+  reward     Reward           @relation(fields: [rewardId], references: [id])
+  rewardId   String
+  // Snapshot: the reward can be renamed or removed later
+  rewardName String
+  costPoints Int
+  status     RedemptionStatus @default(PENDING)
+  branch     Branch?          @relation(fields: [branchId], references: [id])
+  branchId   String?
+  note       String?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@index([status, createdAt])
+  @@index([customerId])
+}
+
+model LoyaltyEntry {
+  id         String      @id @default(cuid())
+  customer   Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String
+  kind       LoyaltyKind
+  // Signed: positive earns, negative spends. Zero when the row only moves points.
+  stamps     Int         @default(0)
+  points     Int         @default(0)
+  product    Product?    @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productId  String?
+  order      Order?      @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  orderId    String?
+  reward     Reward?     @relation(fields: [rewardId], references: [id], onDelete: SetNull)
+  rewardId   String?
+  // Why the row exists — required for ADJUST, free text otherwise
+  note       String?
+  createdAt  DateTime    @default(now())
+
+  @@index([customerId, kind])
+  @@index([customerId, productId])
+  @@index([orderId])
 }

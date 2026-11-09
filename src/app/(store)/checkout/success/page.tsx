@@ -3,6 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { formatPrice } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
+import { orderLoyalty } from "@/lib/loyalty";
+import { getStoreSettings } from "@/lib/settings";
 import { ClearCart } from "@/components/cart/clear-cart";
 
 export const metadata: Metadata = {
@@ -13,11 +15,13 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 type OrderSummary = {
+  id: string;
   orderNumber: string;
   total: number;
   paymentMethod: string;
   paymentStatus: string;
   status: string;
+  customerId: string | null;
   productIds: string[];
 };
 
@@ -26,11 +30,13 @@ async function findOrder(orderNumber: string): Promise<OrderSummary | null> {
     const o = await prisma.order.findUnique({
       where: { orderNumber },
       select: {
+        id: true,
         orderNumber: true,
         total: true,
         paymentMethod: true,
         paymentStatus: true,
         status: true,
+        customerId: true,
         items: { select: { productId: true } },
       },
     });
@@ -57,6 +63,19 @@ export default async function SuccessPage({
     redirect("/checkout?payment=failed");
   }
   const awaitingPayment = online && order.paymentStatus !== "PAID";
+
+  // What the order moved on the Club Toby ledger (account orders only).
+  const settings = await getStoreSettings();
+  const club =
+    settings.loyalty.enabled && order.customerId ? await orderLoyalty(order.id) : null;
+  const clubLine = club
+    ? [
+        club.stamps > 0 ? `${club.stamps} sello${club.stamps === 1 ? "" : "s"}` : "",
+        club.points > 0 ? `${club.points} puntos para los regalos` : "",
+      ]
+        .filter(Boolean)
+        .join(" y ")
+    : "";
 
   return (
     <div className="mx-auto max-w-2xl px-5 py-24 text-center">
@@ -105,6 +124,31 @@ export default async function SuccessPage({
           Ver mis pedidos
         </Link>
       </div>
+
+      {club && (clubLine || club.redeemed) ? (
+        <div className="mx-auto mt-6 max-w-sm rounded-xl border border-accent/40 bg-accent/5 p-5 text-sm">
+          <p className="font-medium text-ink">{settings.loyalty.name}</p>
+          <p className="mt-1 text-muted">
+            {clubLine && (
+              <>
+                Ganaste <span className="text-ink">{clubLine}</span>.
+              </>
+            )}
+            {club!.redeemed && (
+              <>
+                {clubLine ? " " : ""}
+                <span className="text-ink">Tu producto gratis ya va en el pedido</span>.
+              </>
+            )}
+          </p>
+          <Link
+            href="/club-toby"
+            className="mt-3 inline-block rounded-full border border-[var(--line-strong)] px-6 py-2 text-xs font-medium uppercase tracking-[0.12em] text-ink transition hover:border-accent hover:text-accent-strong"
+          >
+            Ver mi tarjeta
+          </Link>
+        </div>
+      ) : null}
 
       <p className="mx-auto mt-6 max-w-md text-sm text-muted">
         {online

@@ -96,6 +96,17 @@ function StoreIcon() {
   );
 }
 
+function GiftIcon() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 12v7.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19.5V12" />
+      <path d="M2.5 8h19v4h-19z" />
+      <path d="M12 8v13" />
+      <path d="M12 8S10.5 3.5 8 4.5 9 8 12 8zM12 8s1.5-4.5 4-3.5S15 8 12 8z" />
+    </svg>
+  );
+}
+
 function BoxIcon() {
   return (
     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
@@ -117,6 +128,7 @@ export const ADMIN_LINKS: { label: string; href: string; icon: ReactNode; adminO
   { label: "Categorías", href: "/admin/categories", icon: <LayersIcon />, adminOnly: true },
   { label: "Sucursales", href: "/admin/branches", icon: <StoreIcon />, adminOnly: true },
   { label: "Clientes", href: "/admin/customers", icon: <UsersIcon /> },
+  { label: "Club", href: "/admin/loyalty", icon: <GiftIcon /> },
   { label: "Mensajes", href: "/admin/messages", icon: <InboxIcon /> },
   { label: "Ajustes", href: "/admin/settings", icon: <GearIcon />, adminOnly: true },
 ];

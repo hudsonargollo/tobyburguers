@@ -6,7 +6,7 @@ import { CONTACT } from "./contact";
 import { FLAT_SHIPPING, FREE_SHIPPING_THRESHOLD, DELIVERY_TIME } from "./shipping";
 import type { StoreSettings } from "./settings-shared";
 
-export type { StoreSettings } from "./settings-shared";
+export type { StoreSettings, LoyaltySettings } from "./settings-shared";
 
 // Store settings live in the DB (Setting key "store") and are edited in
 // Admin → Settings. Anything never saved falls back to the env-based defaults
@@ -39,6 +39,17 @@ export const DEFAULT_SETTINGS: StoreSettings = {
     "Retiro en sucursal · Pago contra entrega",
   ],
   inventory: { lowStockThreshold: 5 },
+  loyalty: {
+    enabled: true,
+    name: "Club Toby",
+    stampsToFree: 10,
+    eligible: "all",
+    eligibleSlugs: [],
+    pointsPer: 1,
+    pointsAmount: 10,
+    pointsOnShipping: false,
+    expiryDays: 0,
+  },
   notifications: { orderEmail: process.env.ADMIN_NOTIFY_EMAIL || "" },
 };
 
@@ -52,6 +63,7 @@ function merge(saved: Partialish | null | undefined): StoreSettings {
     shipping: { ...DEFAULT_SETTINGS.shipping, ...(s.shipping as object) },
     announcements: Array.isArray(s.announcements) ? (s.announcements as string[]) : DEFAULT_SETTINGS.announcements,
     inventory: { ...DEFAULT_SETTINGS.inventory, ...(s.inventory as object) },
+    loyalty: { ...DEFAULT_SETTINGS.loyalty, ...(s.loyalty as object) },
     notifications: { ...DEFAULT_SETTINGS.notifications, ...(s.notifications as object) },
   };
 }

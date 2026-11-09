@@ -26,7 +26,13 @@ const HELP = [
   { label: "Preguntas frecuentes", href: "/faq" },
 ];
 
-export function MobileMenu({ branchName = null }: { branchName?: string | null }) {
+export function MobileMenu({
+  branchName = null,
+  clubName = null,
+}: {
+  branchName?: string | null;
+  clubName?: string | null;
+}) {
   const pathname = usePathname();
   const picker = useBranchPicker();
   // The menu remembers which page it was opened on, so navigating anywhere
@@ -36,6 +42,10 @@ export function MobileMenu({ branchName = null }: { branchName?: string | null }
   const setOpen = (v: boolean) => setOpenOn(v ? pathname : null);
   const mounted = useMounted();
   const { count, ready } = useCart();
+
+  const nav = clubName
+    ? [...NAV.slice(0, 2), { label: clubName, href: "/club-toby" }, ...NAV.slice(2)]
+    : NAV;
 
   // Lock body scroll + close on Escape while open
   useEffect(() => {
@@ -112,7 +122,7 @@ export function MobileMenu({ branchName = null }: { branchName?: string | null }
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto px-5 py-6">
           <nav className="flex flex-col">
-            {NAV.map((item) => (
+            {nav.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

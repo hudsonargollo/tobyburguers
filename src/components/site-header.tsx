@@ -17,9 +17,21 @@ const NAV = [
 const iconBtn =
   "relative flex h-10 w-10 items-center justify-center rounded-full border border-[var(--line)] bg-surface/60 text-brand transition hover:border-accent hover:bg-accent/10 hover:text-accent-strong dark:text-ink";
 
-export function SiteHeader({ branch = null }: { branch?: { name: string } | null }) {
+export function SiteHeader({
+  branch = null,
+  clubName = null,
+}: {
+  branch?: { name: string } | null;
+  clubName?: string | null;
+}) {
   const pathname = usePathname();
   const picker = useBranchPicker();
+
+  // The programme name is owner-editable (Admin → Club Toby), so the link is
+  // built from settings instead of hardcoded into NAV.
+  const nav = clubName
+    ? [...NAV.slice(0, 2), { label: clubName, href: "/club-toby" }, ...NAV.slice(2)]
+    : NAV;
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -54,7 +66,7 @@ export function SiteHeader({ branch = null }: { branch?: { name: string } | null
 
         {/* Primary nav */}
         <nav className="hidden items-center gap-8 lg:flex lg:justify-self-center">
-          {NAV.map((item) => {
+          {nav.map((item) => {
             const active = isActive(item.href);
             return (
               <Link
@@ -100,7 +112,7 @@ export function SiteHeader({ branch = null }: { branch?: { name: string } | null
           </Link>
           <ThemeToggle className={iconBtn} />
           <HeaderCart className={iconBtn} />
-          <MobileMenu branchName={branch?.name ?? null} />
+          <MobileMenu branchName={branch?.name ?? null} clubName={clubName} />
         </div>
       </div>
 

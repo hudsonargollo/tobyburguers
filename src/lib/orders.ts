@@ -7,6 +7,8 @@ import { shippingForBranch } from "./branch";
 import { after } from "next/server";
 import { sendOrderEmails } from "./email";
 import { refreshCatalog } from "./cache-tags";
+import { accrueOrder, getBalances, redeemStamps, refundOrderLoyalty } from "./loyalty";
+import { stampCard, type LoyaltyLine } from "./loyalty-shared";
 
 export const checkoutSchema = z.object({
   customerName: z.string().trim().min(2, "Ingresa tu nombre completo").max(120),
@@ -19,6 +21,8 @@ export const checkoutSchema = z.object({
   postalCode: z.string().max(20).nullish(),
   notes: z.string().max(1000).nullish(),
   paymentMethod: z.enum(["COD", "PAYFAST", "SAFEPAY"]),
+  /** Product whose full stamp card is being spent on this order (one free unit). */
+  redeemProductId: z.string().max(100).nullish(),
   items: z
     .array(
       z.object({
@@ -35,7 +39,13 @@ export const checkoutSchema = z.object({
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
 
 export type CreateOrderResult =
-  | { ok: true; orderNumber: string; total: number }
+  | {
+      ok: true;
+      orderNumber: string;
+      total: number;
+      /** What Club Toby gave this order (0 when the shopper isn't signed in). */
+      loyalty: { stamps: number; points: number; redeemedProduct: string | null };
+    }
   | { ok: false; error: string };
 
 // User-facing validation problems (bad cart) vs unexpected server errors.
@@ -78,7 +88,14 @@ export async function cancelOrderAndRestock(orderId: string): Promise<boolean> {
     }
     return true;
   });
-  if (restocked) refreshCatalog();
+  if (restocked) {
+    refreshCatalog();
+    // The stamps/points that order granted (and any card it spent) are
+    // reversed on the ledger, so a cancelled order neither rewards nor costs.
+    await refundOrderLoyalty(orderId).catch((err) =>
+      console.error("[loyalty] refund entry failed:", err)
+    );
+  }
   return restocked;
 }
 
@@ -125,7 +142,15 @@ export async function createOrder(
       select: {
         productId: true,
         stock: true,
-        product: { select: { id: true, name: true, price: true } },
+        product: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            slug: true,
+            category: { select: { slug: true } },
+          },
+        },
       },
     });
     const byId = new Map(stocks.map((s) => [s.productId, s]));
@@ -150,15 +175,17 @@ export async function createOrder(
       return { productId: s.product.id, name: s.product.name, price: Number(s.product.price), quantity };
     });
 
-    const subtotal = lineItems.reduce((s, i) => s + i.price * i.quantity, 0);
+    let subtotal = lineItems.reduce((s, i) => s + i.price * i.quantity, 0);
     // Shipping rules come from the branch (falling back to store-wide settings).
     const settings = await getStoreSettings();
     const branchView = {
       flatFee: branch.flatFee == null ? null : Number(branch.flatFee),
       freeThreshold: branch.freeThreshold == null ? null : Number(branch.freeThreshold),
     };
-    const shipping = isPickup ? 0 : shippingFor(subtotal, shippingForBranch(branchView, settings));
-    const total = subtotal + shipping;
+    const calcShipping = (base: number) =>
+      isPickup ? 0 : shippingFor(base, shippingForBranch(branchView, settings));
+    let shipping = calcShipping(subtotal);
+    let total = subtotal + shipping;
     const email = data.email.trim().toLowerCase();
 
     // Only attach a customerId that actually exists — a stale session cookie
@@ -171,6 +198,49 @@ export async function createOrder(
       });
       safeCustomerId = customer?.id ?? null;
     }
+
+    // ---- Club Toby -------------------------------------------------------
+    // A full stamp card makes one unit of *that same product* free. The free
+    // unit is priced at 0 as its own line instead of discounting the total, so
+    // stock, the receipt and the confirmation email all agree.
+    const rules = settings.loyalty;
+    let ownedStamps: Record<string, number> = {};
+    let redeemed: { productId: string; name: string } | null = null;
+    if (rules.enabled && safeCustomerId && data.redeemProductId) {
+      const target = lineItems.find((i) => i.productId === data.redeemProductId);
+      if (!target)
+        throw new OrderValidationError("Elige un producto de tu carrito para usar tus sellos.");
+      const balances = await getBalances(safeCustomerId, rules);
+      ownedStamps = balances.stampsByProduct;
+      const card = stampCard(ownedStamps[target.productId] ?? 0, rules);
+      if (!card.full)
+        throw new OrderValidationError(
+          `Aún te faltan ${card.remaining} sellos de "${target.name}" para canjearla gratis.`
+        );
+      redeemed = { productId: target.productId, name: target.name };
+      ownedStamps[target.productId] = Math.max(0, (ownedStamps[target.productId] ?? 0) - rules.stampsToFree);
+      target.quantity -= 1;
+      if (target.quantity === 0) lineItems.splice(lineItems.indexOf(target), 1);
+      lineItems.push({ productId: target.productId, name: target.name, price: 0, quantity: 1 });
+      subtotal = lineItems.reduce((s, i) => s + i.price * i.quantity, 0);
+      shipping = calcShipping(subtotal);
+      total = subtotal + shipping;
+    }
+
+    // Free units never earn stamps, hence the price filter.
+    const loyaltyLines: LoyaltyLine[] = lineItems
+      .filter((i) => i.price > 0)
+      .map((i) => {
+        const p = byId.get(i.productId)?.product;
+        return {
+          productId: i.productId,
+          productSlug: p?.slug ?? "",
+          categorySlug: p?.category.slug ?? "",
+          quantity: i.quantity,
+        };
+      });
+    const noLoyalty = { stamps: 0, points: 0, redeemedProduct: null as string | null };
+    let earned = noLoyalty;
 
     // Decrement stock *conditionally* inside the transaction so two concurrent
     // checkouts can never oversell: the update only matches while enough stock
@@ -196,7 +266,7 @@ export async function createOrder(
                 `"${i.name}" se agotó o quedan menos unidades en esta sucursal. Actualiza tu carrito.`
               );
           }
-          return tx.order.create({
+          const created = await tx.order.create({
             data: {
               orderNumber,
               branchId: branch.id,
@@ -217,6 +287,28 @@ export async function createOrder(
             },
             select: { id: true, createdAt: true },
           });
+
+          // Rewards ride on the same transaction: if the order doesn't commit,
+          // neither do its stamps, and a spend can't be half-applied.
+          if (safeCustomerId) {
+            if (redeemed)
+              await redeemStamps(tx, {
+                customerId: safeCustomerId,
+                productId: redeemed.productId,
+                orderId: created.id,
+                rules,
+              });
+            const gained = await accrueOrder(tx, {
+              orderId: created.id,
+              customerId: safeCustomerId,
+              lines: loyaltyLines,
+              amounts: { subtotal, shipping },
+              rules,
+              ownedStamps,
+            });
+            earned = { ...gained, redeemedProduct: redeemed?.name ?? null };
+          }
+          return created;
         });
       } catch (err) {
         // Retry only on an (astronomically unlikely) order-number collision.
@@ -255,7 +347,7 @@ export async function createOrder(
       }
     });
 
-    return { ok: true, orderNumber, total };
+    return { ok: true, orderNumber, total, loyalty: earned };
   } catch (err) {
     // Cart/stock problems are safe to show to the customer verbatim.
     if (err instanceof OrderValidationError) {

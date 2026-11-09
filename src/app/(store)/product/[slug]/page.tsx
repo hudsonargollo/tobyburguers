@@ -6,6 +6,7 @@ import { getSelectedBranch } from "@/lib/branch";
 import { formatPrice, discountPercent, visiblePack } from "@/lib/format";
 import { ProductGallery } from "@/components/product-gallery";
 import { getStoreSettings } from "@/lib/settings";
+import { pointRuleLabel, stampEligible, stampRuleLabel } from "@/lib/loyalty-shared";
 import { ProductCard } from "@/components/product-card";
 import { DealPanel } from "@/components/ui/sale-badge";
 import { AddToCart } from "@/components/cart/add-to-cart";
@@ -201,6 +202,18 @@ export default async function ProductPage({ params }: PageProps<"/product/[slug]
           <div className="mt-6 space-y-2.5 rounded-xl border border-[var(--line)] p-4 text-sm">
             <Assure icon="scooter">Delivery en Santa Cruz. Entrega estimada: <b className="font-medium text-ink">{DELIVERY_TIME}</b>. También puedes retirar en tu sucursal.</Assure>
             <Assure icon="cash">Pago contra entrega disponible</Assure>
+            {settings.loyalty.enabled &&
+              stampEligible(
+                { productSlug: product.slug, categorySlug: product.category.slug },
+                settings.loyalty
+              ) && (
+                <Assure icon="gift">
+                  <Link href="/club-toby" className="font-medium text-accent-strong hover:underline">
+                    {settings.loyalty.name}
+                  </Link>
+                  : {stampRuleLabel(settings.loyalty)} y {pointRuleLabel(settings.loyalty)}.
+                </Assure>
+              )}
             <Assure icon="return"><b className="font-medium text-ink">Atención cuidadosa</b>: contáctanos con tu número de pedido y lo revisamos lo más rápido posible</Assure>
             <Assure icon="shield">Compra segura y atención directa</Assure>
           </div>
@@ -327,7 +340,7 @@ function Dot() {
   return <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent-strong" />;
 }
 
-function Assure({ icon, children }: { icon: "scooter" | "cash" | "return" | "shield"; children: React.ReactNode }) {
+function Assure({ icon, children }: { icon: "scooter" | "cash" | "return" | "shield" | "gift"; children: React.ReactNode }) {
   const paths: Record<string, React.ReactNode> = {
     scooter: (
       <>
@@ -342,6 +355,14 @@ function Assure({ icon, children }: { icon: "scooter" | "cash" | "return" | "shi
     cash: (<><rect x="2.5" y="6" width="19" height="12" rx="2" /><circle cx="12" cy="12" r="2.3" /><path d="M6 9.5v5M18 9.5v5" /></>),
     return: (<><path d="M4 9a8 8 0 1 1-1 4" /><path d="M4 5v4h4" strokeLinecap="round" strokeLinejoin="round" /></>),
     shield: (<><path d="M12 3l7 3v5c0 4.4-3 7.6-7 9-4-1.4-7-4.6-7-9V6l7-3z" /><path d="M9 12l2 2 4-4" /></>),
+    gift: (
+      <>
+        <path d="M20 12v7.5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19.5V12" />
+        <path d="M2.5 8h19v4h-19z" />
+        <path d="M12 8v13" />
+        <path d="M12 8S10.5 3.5 8 4.5 9 8 12 8zM12 8s1.5-4.5 4-3.5S15 8 12 8z" />
+      </>
+    ),
   };
   return (
     <div className="flex items-center gap-3 text-muted">
