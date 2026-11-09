@@ -230,13 +230,15 @@ export async function refundOrderLoyalty(orderId: string): Promise<boolean> {
     for (const e of earned) {
       let stamps = -e.stamps;
       let points = -e.points;
-      if (stamps > 0) {
+      // Only the debits need a floor: a refund may not push a spent balance
+      // further down than what the customer still has.
+      if (e.stamps > 0) {
         const left = await balanceOf(tx, e.customerId, "stamps", e.productId ?? undefined);
-        stamps = Math.max(0, Math.min(stamps, left));
+        stamps = -Math.min(e.stamps, Math.max(0, left));
       }
-      if (points > 0) {
+      if (e.points > 0) {
         const left = await balanceOf(tx, e.customerId, "points");
-        points = Math.max(0, Math.min(points, left));
+        points = -Math.min(e.points, Math.max(0, left));
       }
       await tx.loyaltyEntry.create({
         data: {
